@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GlobalState, NotificationType } from '../types';
 
 interface Props {
@@ -14,6 +14,11 @@ interface Props {
 const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConnected, watchAlert, onToggleActive, onProcessPayment }) => {
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
   const [showHistory, setShowHistory] = useState(false);
+  const [shakeClass, setShakeClass] = useState('');
+  
+  // Track previous states to trigger shake
+  const prevActiveRef = useRef(userWallet.isActive);
+  const prevAlertRef = useRef(watchAlert);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -21,6 +26,31 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Trigger shake animation when status changes or alerts arrive
+  useEffect(() => {
+    let timeout: number;
+    
+    const triggerShake = (intensity: 'light' | 'heavy') => {
+      setShakeClass(intensity === 'heavy' ? 'animate-watch-shake-heavy' : 'animate-watch-shake-light');
+      clearTimeout(timeout);
+      timeout = window.setTimeout(() => setShakeClass(''), 300);
+    };
+
+    // Shake on alert change (success or error)
+    if (watchAlert && watchAlert !== prevAlertRef.current) {
+      triggerShake(watchAlert.type === 'error' ? 'heavy' : 'light');
+    } 
+    // Shake on activation toggle
+    else if (userWallet.isActive !== prevActiveRef.current) {
+      triggerShake('light');
+    }
+
+    prevActiveRef.current = userWallet.isActive;
+    prevAlertRef.current = watchAlert;
+
+    return () => clearTimeout(timeout);
+  }, [watchAlert, userWallet.isActive]);
 
   // Bluetooth icon blinks blue when connected to mobile, and green when dealing with a merchant request
   const bluetoothColorClass = pendingRequest 
@@ -33,7 +63,7 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
       <div className="w-24 h-48 bg-slate-800 rounded-t-3xl border-x border-t border-slate-700 mb-[-60px] shadow-lg"></div>
 
       {/* Watch Case */}
-      <div className="relative z-10 w-72 h-72 rounded-full border-4 border-slate-700 bg-slate-900 shadow-[0_0_50px_rgba(0,0,0,0.8)] flex items-center justify-center p-2">
+      <div className={`relative z-10 w-72 h-72 rounded-full border-4 border-slate-700 bg-slate-900 shadow-[0_0_50px_rgba(0,0,0,0.8)] flex items-center justify-center p-2 transition-transform duration-75 ${shakeClass}`}>
         {/* Watch Face Screen */}
         <div 
           className="watch-face relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-6 text-center select-none"
@@ -167,11 +197,35 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
           from { opacity: 0; transform: scale(0.85); filter: blur(4px); }
           to { opacity: 1; transform: scale(1); filter: blur(0); }
         }
+        @keyframes watch-shake-light {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-2px, 2px); }
+          50% { transform: translate(2px, -2px); }
+          75% { transform: translate(-2px, -2px); }
+        }
+        @keyframes watch-shake-heavy {
+          0%, 100% { transform: translate(0, 0); }
+          10% { transform: translate(-4px, 0); }
+          20% { transform: translate(4px, 0); }
+          30% { transform: translate(-4px, 0); }
+          40% { transform: translate(4px, 0); }
+          50% { transform: translate(-4px, 0); }
+          60% { transform: translate(4px, 0); }
+          70% { transform: translate(-4px, 0); }
+          80% { transform: translate(4px, 0); }
+          90% { transform: translate(-4px, 0); }
+        }
         .animate-progress-watch {
           animation: progress-watch 3.5s linear forwards;
         }
         .status-fade-animation {
           animation: status-fade 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .animate-watch-shake-light {
+          animation: watch-shake-light 0.1s linear infinite;
+        }
+        .animate-watch-shake-heavy {
+          animation: watch-shake-heavy 0.2s linear forwards;
         }
       `}</style>
     </div>

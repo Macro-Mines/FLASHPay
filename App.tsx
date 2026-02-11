@@ -5,6 +5,7 @@ import SmartphoneUPI from './components/SmartphoneUPI';
 import Smartwatch from './components/Smartwatch';
 import MerchantApp from './components/MerchantApp';
 import { sounds } from './utils/audio';
+import { haptics } from './utils/haptics';
 
 const STORAGE_KEY = 'flashpay_prototype_state';
 
@@ -45,15 +46,25 @@ const App: React.FC = () => {
 
   const triggerWatchAlert = useCallback((message: string, type: NotificationType = 'error') => {
     setWatchAlert({ message, type });
-    if (type === 'success') sounds.playSuccess();
-    else if (type === 'error') sounds.playError();
+    if (type === 'success') {
+      sounds.playSuccess();
+      haptics.successPulse();
+    } else if (type === 'error') {
+      sounds.playError();
+      haptics.errorPulse();
+    }
     setTimeout(() => setWatchAlert(null), 3500);
   }, []);
 
   const triggerPhoneAlert = useCallback((message: string, type: NotificationType = 'success') => {
     setPhoneAlert({ message, type });
-    if (type === 'success') sounds.playSuccess();
-    else if (type === 'error') sounds.playError();
+    if (type === 'success') {
+      sounds.playSuccess();
+      haptics.successPulse();
+    } else if (type === 'error') {
+      sounds.playError();
+      haptics.errorPulse();
+    }
   }, []);
 
   const toggleUserActive = () => {
@@ -63,11 +74,13 @@ const App: React.FC = () => {
       userWallet: { ...prev.userWallet, isActive: newState }
     }));
     sounds.playPop();
+    haptics.mediumClick();
     triggerWatchAlert(newState ? 'WATCH ACTIVE' : 'WATCH INACTIVE', newState ? 'success' : 'error');
   };
 
   const toggleMerchantActive = () => {
     sounds.playPop();
+    haptics.mediumClick();
     setState(prev => ({
       ...prev,
       merchantWallet: { ...prev.merchantWallet, isActive: !prev.merchantWallet.isActive }
@@ -76,6 +89,7 @@ const App: React.FC = () => {
 
   const setConnectivity = (type: 'bluetooth' | 'wifi', value: boolean) => {
     sounds.playPing();
+    haptics.lightClick();
     setState(prev => ({
       ...prev,
       connectivity: {
@@ -149,7 +163,8 @@ const App: React.FC = () => {
         timestamp: Date.now()
       }
     }));
-    sounds.playPing(); // Notify the watch app
+    sounds.playPing(); 
+    haptics.mediumClick();
     setActiveMode(AppMode.WATCH);
   };
 
@@ -254,13 +269,13 @@ const App: React.FC = () => {
         </div>
         
         <nav className="flex gap-2 bg-slate-900 p-1 rounded-xl">
-          <button onClick={() => { setActiveMode(AppMode.UPI); sounds.playPop(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.UPI ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
+          <button onClick={() => { setActiveMode(AppMode.UPI); sounds.playPop(); haptics.lightClick(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.UPI ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-mobile-alt mr-2"></i> UPI App
           </button>
-          <button onClick={() => { setActiveMode(AppMode.WATCH); sounds.playPop(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.WATCH ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
+          <button onClick={() => { setActiveMode(AppMode.WATCH); sounds.playPop(); haptics.lightClick(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.WATCH ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-clock mr-2"></i> Watch
           </button>
-          <button onClick={() => { setActiveMode(AppMode.MERCHANT); sounds.playPop(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.MERCHANT ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
+          <button onClick={() => { setActiveMode(AppMode.MERCHANT); sounds.playPop(); haptics.lightClick(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.MERCHANT ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-store mr-2"></i> Merchant
           </button>
         </nav>

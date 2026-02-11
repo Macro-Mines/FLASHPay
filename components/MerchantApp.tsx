@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { GlobalState, NotificationType } from '../types';
 import NotificationOverlay from './NotificationOverlay';
+import { haptics } from '../utils/haptics';
 
 interface Props {
   wallet: GlobalState['merchantWallet'];
@@ -23,6 +24,7 @@ const MerchantApp: React.FC<Props> = ({
   const [requestAmt, setRequestAmt] = useState<string>('');
 
   const handleKeypad = (val: string) => {
+    haptics.lightClick();
     if (val === 'C') return setRequestAmt('');
     if (requestAmt.length >= 4) return;
     setRequestAmt(prev => prev + val);
@@ -91,7 +93,7 @@ const MerchantApp: React.FC<Props> = ({
 
         <div className="flex gap-3">
           <button 
-            onClick={onWithdraw}
+            onClick={() => { haptics.lightClick(); onWithdraw(); }}
             className="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
           >
             <i className="fas fa-university"></i> Settle to Bank
