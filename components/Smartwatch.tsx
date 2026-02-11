@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlobalState } from '../types';
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
 
 const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConnected, onToggleActive, onProcessPayment }) => {
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
-  const touchStartX = useRef<number | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -21,26 +21,10 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
     return () => clearInterval(timer);
   }, []);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || !pendingRequest) return;
-    
-    const touchEndX = e.changedTouches[0].clientX;
-    const deltaX = touchEndX - touchStartX.current;
-    
-    // Threshold of 50px for a left swipe
-    if (deltaX < -50) {
-      onProcessPayment(false); // Cancel payment
-    }
-    
-    touchStartX.current = null;
-  };
-
   // Bluetooth icon blinks blue when connected to mobile, and green when dealing with a merchant request
-  const bluetoothColorClass = pendingRequest ? 'text-green-400 blinking-green' : (isMobileConnected ? 'text-blue-400 animate-pulse' : 'text-slate-700');
+  const bluetoothColorClass = pendingRequest 
+    ? 'text-green-400 blinking-green !shadow-none' 
+    : (isMobileConnected ? 'text-blue-400 animate-pulse' : 'text-slate-700');
 
   return (
     <div className="relative flex flex-col items-center">
@@ -52,12 +36,10 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
         {/* Watch Face Screen */}
         <div 
           className="watch-face relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-6 text-center select-none"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
         >
           
           {/* Top Status Area */}
-          <div className="absolute top-6 flex flex-col items-center gap-0.5">
+          <div className="absolute top-4 flex flex-col items-center gap-0.5 z-20">
             <div className={`transition-colors duration-500 ${bluetoothColorClass}`}>
               <i className="fab fa-bluetooth-b text-base"></i>
             </div>
@@ -67,11 +49,10 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
           </div>
 
           {pendingRequest ? (
-            <div className="animate-in zoom-in duration-300 flex flex-col items-center gap-2 w-full mt-6">
-              <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Request From</p>
+            <div className="animate-in zoom-in duration-300 flex flex-col items-center gap-2 w-full mt-14">
+              <p className="text-[9px] text-slate-400 uppercase tracking-tighter">Request From</p>
               <h4 className="text-xs font-semibold truncate max-w-full mb-1">{pendingRequest.from}</h4>
-              <div className="text-2xl font-bold text-indigo-400 mb-2">₹{pendingRequest.amount}</div>
-              <p className="text-[8px] text-slate-500 uppercase mb-2">Swipe left to cancel</p>
+              <div className="text-4xl font-black text-indigo-400 mb-2">₹{pendingRequest.amount}</div>
               <div className="flex gap-4 mt-2">
                 <button 
                   onClick={() => onProcessPayment(false)}
@@ -87,11 +68,39 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
                 </button>
               </div>
             </div>
+          ) : showHistory ? (
+            <div className="flex flex-col items-center w-full h-full mt-12 px-2 animate-in slide-in-from-bottom duration-300">
+               <div className="flex justify-between items-center w-full mb-2">
+                 <p className="text-[9px] font-bold text-slate-500 uppercase">Local History</p>
+                 <button onClick={() => setShowHistory(false)} className="text-[10px] text-indigo-400 font-bold uppercase">Back</button>
+               </div>
+               <div className="w-full flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1 pb-10">
+                 {userWallet.pendingSync.length === 0 ? (
+                   <p className="text-[9px] text-slate-600 py-8 font-bold uppercase tracking-widest">No local transactions</p>
+                 ) : (
+                   userWallet.pendingSync.map(tx => (
+                     <div key={tx.id} className="flex justify-between items-center bg-slate-800/40 p-2 rounded-lg border border-slate-700/50">
+                        <div className="text-left">
+                          <p className="text-[9px] font-bold truncate max-w-[80px]">{tx.peer}</p>
+                          <p className="text-[7px] text-slate-500">{new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                        <p className="text-[9px] font-black text-slate-300">-₹{tx.amount}</p>
+                     </div>
+                   ))
+                 )}
+               </div>
+            </div>
           ) : (
             <>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">Flash Wallet</p>
-              <h3 className="text-3xl font-bold mb-1">₹{userWallet.balance.toFixed(0)}</h3>
-              <p className="text-[10px] text-slate-400 mb-4">{userWallet.isActive ? 'READY' : 'INACTIVE'}</p>
+              <div 
+                className="mt-4 cursor-pointer active:scale-95 transition-transform" 
+                onClick={() => setShowHistory(true)}
+                title="Tap for history"
+              >
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mb-1">Flash Wallet</p>
+                <h3 className="text-3xl font-bold mb-1">₹{userWallet.balance.toFixed(0)}</h3>
+                <p className="text-[10px] text-slate-400 mb-4">{userWallet.isActive ? 'READY' : 'INACTIVE'}</p>
+              </div>
               
               {/* Central Blinking Dot Button */}
               <button 
@@ -109,6 +118,7 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
                   ></div>
                 ))}
               </div>
+              <p className="absolute bottom-6 text-[7px] font-bold text-slate-600 uppercase tracking-tighter">Tap balance for history</p>
             </>
           )}
 

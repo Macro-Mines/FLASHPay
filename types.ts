@@ -17,7 +17,8 @@ export interface GlobalState {
   userWallet: {
     balance: number;
     phoneBalance: number;
-    transactions: Transaction[];
+    transactions: Transaction[]; // Synced/Phone history
+    pendingSync: Transaction[];   // Local to Watch, not yet synced
     offlineCount: number;
     isActive: boolean;
   };

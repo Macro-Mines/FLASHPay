@@ -16,6 +16,7 @@
         margin: 0;
         overflow-x: hidden;
       }
+      /* Combined blinking animations that handle both text (icons) and boxes (dots) */
       .blinking-green {
         animation: blink-green 1s infinite;
       }
@@ -23,17 +24,44 @@
         animation: blink-red 1s infinite;
       }
       @keyframes blink-green {
-        0%, 100% { opacity: 1; box-shadow: 0 0 10px #22c55e; }
-        50% { opacity: 0.3; box-shadow: none; }
+        0%, 100% { 
+          opacity: 1; 
+          box-shadow: 0 0 10px #22c55e;
+          text-shadow: 0 0 8px #22c55e;
+        }
+        50% { 
+          opacity: 0.3; 
+          box-shadow: none;
+          text-shadow: none;
+        }
       }
       @keyframes blink-red {
-        0%, 100% { opacity: 1; box-shadow: 0 0 10px #ef4444; }
-        50% { opacity: 0.3; box-shadow: none; }
+        0%, 100% { 
+          opacity: 1; 
+          box-shadow: 0 0 10px #ef4444;
+          text-shadow: 0 0 8px #ef4444;
+        }
+        50% { 
+          opacity: 0.3; 
+          box-shadow: none;
+          text-shadow: none;
+        }
       }
       .watch-face {
         aspect-ratio: 1/1;
         border-radius: 50%;
         background: radial-gradient(circle at center, #1e293b, #000);
+      }
+      /* Custom scrollbar for transaction history */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 10px;
       }
     </style>
   <script type="importmap">

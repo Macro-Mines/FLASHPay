@@ -12,6 +12,7 @@ const initialState: GlobalState = {
     balance: 0,
     phoneBalance: 10000,
     transactions: [],
+    pendingSync: [],
     offlineCount: 0,
     isActive: true,
   },
@@ -64,10 +65,20 @@ const App: React.FC = () => {
   };
 
   const loadWatchWallet = (amount: number) => {
-    if (!state.connectivity.isWifiOn) return alert("Please turn on Wi-Fi to transfer money");
+    if (!state.connectivity.isWifiOn) return alert("Please turn on Wi-Fi to connect to bank server");
+    if (!state.connectivity.isBluetoothOn) return alert("Please connect Watch via Bluetooth to transfer funds");
     if (amount <= 0 || amount > 500) return alert("Amount must be between 1 and 500");
     if (state.userWallet.balance + amount > 500) return alert("Watch wallet limit is ₹500");
     if (state.userWallet.phoneBalance < amount) return alert("Insufficient bank balance");
+
+    const txId = `TXN-LOAD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const tx: Transaction = {
+      id: txId,
+      amount: amount,
+      timestamp: Date.now(),
+      type: 'CREDIT',
+      peer: 'Primary Bank',
+    };
 
     setState(prev => ({
       ...prev,
@@ -75,6 +86,7 @@ const App: React.FC = () => {
         ...prev.userWallet,
         balance: prev.userWallet.balance + amount,
         phoneBalance: prev.userWallet.phoneBalance - amount,
+        transactions: [tx, ...prev.userWallet.transactions],
       }
     }));
   };
@@ -103,9 +115,18 @@ const App: React.FC = () => {
     const request = state.pendingPaymentRequest;
     if (!request) return;
 
-    if (!state.userWallet.isActive) return alert("Watch is deactivated!");
-    if (state.userWallet.balance < request.amount) return alert("Insufficient watch balance");
-    if (state.userWallet.offlineCount >= 5) return alert("Offline limit reached. Sync with phone.");
+    // BUSINESS RULES VALIDATION
+    if (!state.userWallet.isActive) {
+      return alert("Watch is deactivated. Tap the center dot to activate.");
+    }
+    
+    if (state.userWallet.balance < request.amount) {
+      return alert(`Insufficient Funds!\n\nYour balance: ₹${state.userWallet.balance.toFixed(2)}\nRequired: ₹${request.amount.toFixed(2)}`);
+    }
+    
+    if (state.userWallet.offlineCount >= 5) {
+      return alert("Offline Limit Reached!\n\nYou have completed 5 offline transactions. Please sync with your FLASHPay UPI app to continue.");
+    }
 
     const txId = `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const tx: Transaction = {
@@ -127,7 +148,7 @@ const App: React.FC = () => {
       userWallet: {
         ...prev.userWallet,
         balance: prev.userWallet.balance - request.amount,
-        transactions: [tx, ...prev.userWallet.transactions],
+        pendingSync: [tx, ...prev.userWallet.pendingSync],
         offlineCount: prev.userWallet.offlineCount + 1,
       },
       merchantWallet: {
@@ -143,14 +164,17 @@ const App: React.FC = () => {
 
   const syncWatch = () => {
     if (!state.connectivity.isBluetoothOn) return alert("Connect Watch via Bluetooth to sync data");
+    
     setState(prev => ({
       ...prev,
       userWallet: {
         ...prev.userWallet,
+        transactions: [...prev.userWallet.pendingSync, ...prev.userWallet.transactions],
+        pendingSync: [],
         offlineCount: 0,
       }
     }));
-    alert("Synced with Phone successfully.");
+    alert("Synced with Phone successfully. Offline counter reset.");
   };
 
   const withdrawMerchant = () => {
@@ -221,10 +245,6 @@ const App: React.FC = () => {
           />
         )}
       </main>
-
-      <footer className="w-full max-w-4xl text-center mt-8 text-slate-500 text-sm">
-        <p>FLASHPay POC Prototype - Micro-payments up to ₹500. Offline transaction limit: 5</p>
-      </footer>
     </div>
   );
 };

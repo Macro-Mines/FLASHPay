@@ -61,6 +61,8 @@ const SmartphoneUPI: React.FC<Props> = ({ userWallet, connectivity, onLoadMoney,
     );
   }
 
+  const isLoadReady = connectivity.isWifiOn && connectivity.isBluetoothOn;
+
   return (
     <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-2xl relative overflow-hidden flex flex-col h-[700px]">
       {/* Phone Notch & Status Bar */}
@@ -89,7 +91,10 @@ const SmartphoneUPI: React.FC<Props> = ({ userWallet, connectivity, onLoadMoney,
       <div className="mt-10 flex flex-col gap-8 flex-1">
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-slate-400 text-xs uppercase tracking-wider">Consumer App</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <i className="fas fa-bolt text-indigo-500 text-[10px]"></i>
+              <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold">FLASHPay UPI</p>
+            </div>
             <h2 className="text-2xl font-bold">Hello, User</h2>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 shadow-lg shadow-black/20">
@@ -134,6 +139,13 @@ const SmartphoneUPI: React.FC<Props> = ({ userWallet, connectivity, onLoadMoney,
                 className="w-full bg-slate-800/50 border border-slate-700/50 rounded-2xl pl-8 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-slate-800 transition-all text-xl font-bold placeholder:text-slate-600"
               />
             </div>
+            {!isLoadReady && (
+               <p className="text-[8px] text-red-400 font-bold uppercase tracking-tight text-center">
+                 { !connectivity.isWifiOn && !connectivity.isBluetoothOn ? 'Turn on Wi-Fi & Bluetooth to Load' : 
+                   !connectivity.isWifiOn ? 'Wi-Fi required for bank connection' : 
+                   'Connect Watch via Bluetooth to transfer' }
+               </p>
+            )}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -142,9 +154,9 @@ const SmartphoneUPI: React.FC<Props> = ({ userWallet, connectivity, onLoadMoney,
                 onLoadMoney(Number(amount));
                 setAmount('');
               }}
-              className={`group relative overflow-hidden h-14 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${connectivity.isWifiOn ? 'bg-white text-indigo-950 hover:bg-indigo-50' : 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700'}`}
+              className={`group relative overflow-hidden h-14 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${isLoadReady ? 'bg-white text-indigo-950 hover:bg-indigo-50' : 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700'}`}
             >
-              <i className={`fas fa-plus-circle ${connectivity.isWifiOn ? 'text-indigo-600' : ''}`}></i>
+              <i className={`fas fa-plus-circle ${isLoadReady ? 'text-indigo-600' : ''}`}></i>
               Load Watch
             </button>
             <button 
