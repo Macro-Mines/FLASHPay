@@ -32,4 +32,8 @@ export interface GlobalState {
     amount: number;
     timestamp: number;
   } | null;
+  connectivity: {
+    isBluetoothOn: boolean;
+    isWifiOn: boolean;
+  };
 }

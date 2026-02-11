@@ -29,7 +29,9 @@ const MerchantApp: React.FC<Props> = ({ wallet, onRequestPayment, onToggleActive
               onClick={onToggleActive}
               className={`w-3 h-3 rounded-full ${wallet.isActive ? 'blinking-green bg-green-500' : 'blinking-red bg-red-500'}`}
             ></button>
-            <span className="text-xs font-bold text-slate-400 tracking-wider">TERMINAL ACTIVE</span>
+            <span className="text-xs font-bold text-slate-400 tracking-wider">
+              {wallet.isActive ? 'TERMINAL ACTIVE' : 'TERMINAL INACTIVE'}
+            </span>
           </div>
           <h2 className="text-xl font-bold mt-1">Merchant Hub</h2>
         </div>

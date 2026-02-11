@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppMode, GlobalState, Transaction } from './types';
 import SmartphoneUPI from './components/SmartphoneUPI';
 import Smartwatch from './components/Smartwatch';
@@ -10,7 +10,7 @@ const STORAGE_KEY = 'flashpay_prototype_state';
 const initialState: GlobalState = {
   userWallet: {
     balance: 0,
-    phoneBalance: 10000, // Starting demo bank balance
+    phoneBalance: 10000,
     transactions: [],
     offlineCount: 0,
     isActive: true,
@@ -22,6 +22,10 @@ const initialState: GlobalState = {
     isActive: true,
   },
   pendingPaymentRequest: null,
+  connectivity: {
+    isBluetoothOn: false,
+    isWifiOn: false,
+  }
 };
 
 const App: React.FC = () => {
@@ -31,7 +35,6 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : initialState;
   });
 
-  // Persist state
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
@@ -50,7 +53,18 @@ const App: React.FC = () => {
     }));
   };
 
+  const setConnectivity = (type: 'bluetooth' | 'wifi', value: boolean) => {
+    setState(prev => ({
+      ...prev,
+      connectivity: {
+        ...prev.connectivity,
+        [type === 'bluetooth' ? 'isBluetoothOn' : 'isWifiOn']: value
+      }
+    }));
+  };
+
   const loadWatchWallet = (amount: number) => {
+    if (!state.connectivity.isWifiOn) return alert("Please turn on Wi-Fi to transfer money");
     if (amount <= 0 || amount > 500) return alert("Amount must be between 1 and 500");
     if (state.userWallet.balance + amount > 500) return alert("Watch wallet limit is ₹500");
     if (state.userWallet.phoneBalance < amount) return alert("Insufficient bank balance");
@@ -77,7 +91,7 @@ const App: React.FC = () => {
         timestamp: Date.now()
       }
     }));
-    setActiveMode(AppMode.WATCH); // Auto-switch for demo flow
+    setActiveMode(AppMode.WATCH);
   };
 
   const processPayment = (approve: boolean) => {
@@ -128,6 +142,7 @@ const App: React.FC = () => {
   };
 
   const syncWatch = () => {
+    if (!state.connectivity.isBluetoothOn) return alert("Connect Watch via Bluetooth to sync data");
     setState(prev => ({
       ...prev,
       userWallet: {
@@ -164,22 +179,13 @@ const App: React.FC = () => {
         </div>
         
         <nav className="flex gap-2 bg-slate-900 p-1 rounded-xl">
-          <button 
-            onClick={() => setActiveMode(AppMode.UPI)}
-            className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.UPI ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}
-          >
+          <button onClick={() => setActiveMode(AppMode.UPI)} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.UPI ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-mobile-alt mr-2"></i> UPI App
           </button>
-          <button 
-            onClick={() => setActiveMode(AppMode.WATCH)}
-            className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.WATCH ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}
-          >
+          <button onClick={() => setActiveMode(AppMode.WATCH)} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.WATCH ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-clock mr-2"></i> Watch
           </button>
-          <button 
-            onClick={() => setActiveMode(AppMode.MERCHANT)}
-            className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.MERCHANT ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}
-          >
+          <button onClick={() => setActiveMode(AppMode.MERCHANT)} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.MERCHANT ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-store mr-2"></i> Merchant
           </button>
         </nav>
@@ -189,8 +195,10 @@ const App: React.FC = () => {
         {activeMode === AppMode.UPI && (
           <SmartphoneUPI 
             userWallet={state.userWallet} 
+            connectivity={state.connectivity}
             onLoadMoney={loadWatchWallet} 
             onSync={syncWatch}
+            onToggleConnectivity={setConnectivity}
           />
         )}
         
@@ -198,6 +206,7 @@ const App: React.FC = () => {
           <Smartwatch 
             userWallet={state.userWallet} 
             pendingRequest={state.pendingPaymentRequest}
+            isMobileConnected={state.connectivity.isBluetoothOn}
             onToggleActive={toggleUserActive}
             onProcessPayment={processPayment}
           />
