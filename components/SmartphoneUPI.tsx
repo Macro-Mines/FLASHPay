@@ -1,16 +1,27 @@
 
 import React, { useState, useEffect } from 'react';
-import { GlobalState, Transaction } from '../types';
+import { GlobalState, NotificationType } from '../types';
+import NotificationOverlay from './NotificationOverlay';
 
 interface Props {
   userWallet: GlobalState['userWallet'];
   connectivity: GlobalState['connectivity'];
+  phoneAlert: { message: string; type: NotificationType } | null;
   onLoadMoney: (amount: number) => void;
   onSync: () => void;
   onToggleConnectivity: (type: 'bluetooth' | 'wifi', value: boolean) => void;
+  onCloseAlert: () => void;
 }
 
-const SmartphoneUPI: React.FC<Props> = ({ userWallet, connectivity, onLoadMoney, onSync, onToggleConnectivity }) => {
+const SmartphoneUPI: React.FC<Props> = ({ 
+  userWallet, 
+  connectivity, 
+  phoneAlert,
+  onLoadMoney, 
+  onSync, 
+  onToggleConnectivity,
+  onCloseAlert
+}) => {
   const [amount, setAmount] = useState<string>('');
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
@@ -61,7 +72,6 @@ const SmartphoneUPI: React.FC<Props> = ({ userWallet, connectivity, onLoadMoney,
     );
   }
 
-  // A watch is considered "Linked" only if Bluetooth is on AND the watch is Active
   const isWatchLinked = connectivity.isBluetoothOn && userWallet.isActive;
   const isLoadReady = connectivity.isWifiOn && isWatchLinked;
 
@@ -214,6 +224,16 @@ const SmartphoneUPI: React.FC<Props> = ({ userWallet, connectivity, onLoadMoney,
       <div className="mt-6 flex justify-center pb-6">
         <div className="w-24 h-1 bg-slate-800 rounded-full"></div>
       </div>
+
+      {/* Local App Notification */}
+      {phoneAlert && (
+        <NotificationOverlay 
+          message={phoneAlert.message} 
+          type={phoneAlert.type} 
+          duration={3500} 
+          onClose={onCloseAlert} 
+        />
+      )}
 
       <style>{`
         .animate-spin-slow {

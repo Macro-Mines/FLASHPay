@@ -4,6 +4,7 @@ import { AppMode, GlobalState, Transaction, NotificationType } from './types';
 import SmartphoneUPI from './components/SmartphoneUPI';
 import Smartwatch from './components/Smartwatch';
 import MerchantApp from './components/MerchantApp';
+import { sounds } from './utils/audio';
 
 const STORAGE_KEY = 'flashpay_prototype_state';
 
@@ -32,6 +33,7 @@ const initialState: GlobalState = {
 const App: React.FC = () => {
   const [activeMode, setActiveMode] = useState<AppMode>(AppMode.UPI);
   const [watchAlert, setWatchAlert] = useState<{ message: string; type: NotificationType } | null>(null);
+  const [phoneAlert, setPhoneAlert] = useState<{ message: string; type: NotificationType } | null>(null);
   const [state, setState] = useState<GlobalState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : initialState;
@@ -43,7 +45,15 @@ const App: React.FC = () => {
 
   const triggerWatchAlert = useCallback((message: string, type: NotificationType = 'error') => {
     setWatchAlert({ message, type });
+    if (type === 'success') sounds.playSuccess();
+    else if (type === 'error') sounds.playError();
     setTimeout(() => setWatchAlert(null), 3500);
+  }, []);
+
+  const triggerPhoneAlert = useCallback((message: string, type: NotificationType = 'success') => {
+    setPhoneAlert({ message, type });
+    if (type === 'success') sounds.playSuccess();
+    else if (type === 'error') sounds.playError();
   }, []);
 
   const toggleUserActive = () => {
@@ -52,10 +62,12 @@ const App: React.FC = () => {
       ...prev,
       userWallet: { ...prev.userWallet, isActive: newState }
     }));
+    sounds.playPop();
     triggerWatchAlert(newState ? 'WATCH ACTIVE' : 'WATCH INACTIVE', newState ? 'success' : 'error');
   };
 
   const toggleMerchantActive = () => {
+    sounds.playPop();
     setState(prev => ({
       ...prev,
       merchantWallet: { ...prev.merchantWallet, isActive: !prev.merchantWallet.isActive }
@@ -63,6 +75,7 @@ const App: React.FC = () => {
   };
 
   const setConnectivity = (type: 'bluetooth' | 'wifi', value: boolean) => {
+    sounds.playPing();
     setState(prev => ({
       ...prev,
       connectivity: {
@@ -74,16 +87,26 @@ const App: React.FC = () => {
 
   const loadWatchWallet = (amount: number) => {
     if (!state.userWallet.isActive) {
+      triggerPhoneAlert("Watch is inactive. Please activate it first.", 'error');
       return triggerWatchAlert("WATCH INACTIVE", 'error');
     }
 
     if (!state.connectivity.isWifiOn || !state.connectivity.isBluetoothOn) {
+      triggerPhoneAlert("Check connectivity. Bluetooth and Wi-Fi are required.", 'error');
       return triggerWatchAlert("SYNC ERROR", 'error');
     }
     
     if (amount <= 0 || amount > 500) return;
-    if (state.userWallet.balance + amount > 500) return triggerWatchAlert("LIMIT REACHED", 'error');
-    if (state.userWallet.phoneBalance < amount) return triggerWatchAlert("LOW BANK BAL", 'error');
+    
+    if (state.userWallet.balance + amount > 500) {
+      triggerPhoneAlert("Maximum wallet limit of ₹500 reached.", 'error');
+      return triggerWatchAlert("LIMIT REACHED", 'error');
+    }
+    
+    if (state.userWallet.phoneBalance < amount) {
+      triggerPhoneAlert("Insufficient bank balance for this load.", 'error');
+      return triggerWatchAlert("LOW BANK BAL", 'error');
+    }
 
     const txId = `TXN-LOAD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const tx: Transaction = {
@@ -103,7 +126,9 @@ const App: React.FC = () => {
         transactions: [tx, ...prev.userWallet.transactions],
       }
     }));
+    
     triggerWatchAlert(`+₹${amount} LOADED`, 'success');
+    triggerPhoneAlert(`Successfully loaded ₹${amount} into your ZiP WALLET`, 'success');
   };
 
   const requestPayment = (amount: number) => {
@@ -111,7 +136,10 @@ const App: React.FC = () => {
     if (!state.userWallet.isActive) {
       return triggerWatchAlert("WATCH INACTIVE", 'error');
     }
-    if (amount > 200) return;
+    if (amount > 200) {
+      triggerPhoneAlert("Transaction exceeds micro-payment limit of ₹200", 'error');
+      return;
+    }
     
     setState(prev => ({
       ...prev,
@@ -121,6 +149,7 @@ const App: React.FC = () => {
         timestamp: Date.now()
       }
     }));
+    sounds.playPing(); // Notify the watch app
     setActiveMode(AppMode.WATCH);
   };
 
@@ -182,6 +211,7 @@ const App: React.FC = () => {
 
   const syncWatch = () => {
     if (!state.connectivity.isBluetoothOn) {
+      triggerPhoneAlert("Bluetooth connection required to sync history.", 'error');
       return triggerWatchAlert("SYNC FAILED", 'error');
     }
     
@@ -195,6 +225,7 @@ const App: React.FC = () => {
       }
     }));
     triggerWatchAlert("SYNC COMPLETE", 'success');
+    triggerPhoneAlert("Transaction history synced from watch successfully.", 'success');
   };
 
   const withdrawMerchant = () => {
@@ -209,6 +240,7 @@ const App: React.FC = () => {
         bankBalance: prev.merchantWallet.bankBalance + amount,
       }
     }));
+    triggerPhoneAlert(`Settlement of ₹${amount} completed to your bank account.`, 'success');
   };
 
   return (
@@ -222,13 +254,13 @@ const App: React.FC = () => {
         </div>
         
         <nav className="flex gap-2 bg-slate-900 p-1 rounded-xl">
-          <button onClick={() => setActiveMode(AppMode.UPI)} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.UPI ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
+          <button onClick={() => { setActiveMode(AppMode.UPI); sounds.playPop(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.UPI ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-mobile-alt mr-2"></i> UPI App
           </button>
-          <button onClick={() => setActiveMode(AppMode.WATCH)} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.WATCH ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
+          <button onClick={() => { setActiveMode(AppMode.WATCH); sounds.playPop(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.WATCH ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-clock mr-2"></i> Watch
           </button>
-          <button onClick={() => setActiveMode(AppMode.MERCHANT)} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.MERCHANT ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
+          <button onClick={() => { setActiveMode(AppMode.MERCHANT); sounds.playPop(); }} className={`px-4 py-2 rounded-lg transition-all ${activeMode === AppMode.MERCHANT ? 'bg-indigo-600 shadow-lg' : 'hover:bg-slate-800'}`}>
             <i className="fas fa-store mr-2"></i> Merchant
           </button>
         </nav>
@@ -239,9 +271,11 @@ const App: React.FC = () => {
           <SmartphoneUPI 
             userWallet={state.userWallet} 
             connectivity={state.connectivity}
+            phoneAlert={phoneAlert}
             onLoadMoney={loadWatchWallet} 
             onSync={syncWatch}
             onToggleConnectivity={setConnectivity}
+            onCloseAlert={() => setPhoneAlert(null)}
           />
         )}
         
@@ -259,9 +293,11 @@ const App: React.FC = () => {
         {activeMode === AppMode.MERCHANT && (
           <MerchantApp 
             wallet={state.merchantWallet}
+            phoneAlert={phoneAlert}
             onRequestPayment={requestPayment}
             onToggleActive={toggleMerchantActive}
             onWithdraw={withdrawMerchant}
+            onCloseAlert={() => setPhoneAlert(null)}
           />
         )}
       </main>

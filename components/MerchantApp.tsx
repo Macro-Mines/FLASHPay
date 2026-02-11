@@ -1,15 +1,25 @@
 
 import React, { useState } from 'react';
-import { GlobalState } from '../types';
+import { GlobalState, NotificationType } from '../types';
+import NotificationOverlay from './NotificationOverlay';
 
 interface Props {
   wallet: GlobalState['merchantWallet'];
+  phoneAlert: { message: string; type: NotificationType } | null;
   onRequestPayment: (amount: number) => void;
   onToggleActive: () => void;
   onWithdraw: () => void;
+  onCloseAlert: () => void;
 }
 
-const MerchantApp: React.FC<Props> = ({ wallet, onRequestPayment, onToggleActive, onWithdraw }) => {
+const MerchantApp: React.FC<Props> = ({ 
+  wallet, 
+  phoneAlert,
+  onRequestPayment, 
+  onToggleActive, 
+  onWithdraw,
+  onCloseAlert
+}) => {
   const [requestAmt, setRequestAmt] = useState<string>('');
 
   const handleKeypad = (val: string) => {
@@ -92,6 +102,16 @@ const MerchantApp: React.FC<Props> = ({ wallet, onRequestPayment, onToggleActive
           </div>
         </div>
       </div>
+
+      {/* Local Terminal Notification */}
+      {phoneAlert && (
+        <NotificationOverlay 
+          message={phoneAlert.message} 
+          type={phoneAlert.type} 
+          duration={3500} 
+          onClose={onCloseAlert} 
+        />
+      )}
 
       {/* Background Decor */}
       <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>

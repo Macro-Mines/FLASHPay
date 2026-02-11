@@ -119,7 +119,10 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
                 </div>
 
                 <h3 className="text-4xl font-bold mb-0.5 tracking-tight">₹{userWallet.balance.toFixed(0)}</h3>
-                <p className={`text-[10px] font-bold mb-4 ${userWallet.isActive ? 'text-indigo-400' : 'text-red-500'}`}>
+                <p 
+                  key={userWallet.isActive ? 'ready' : 'inactive'}
+                  className={`text-[10px] font-bold mb-4 status-fade-animation ${userWallet.isActive ? 'text-indigo-400' : 'text-red-500'}`}
+                >
                   {userWallet.isActive ? 'READY' : 'INACTIVE'}
                 </p>
               </div>
@@ -160,8 +163,15 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
           from { width: 100%; }
           to { width: 0%; }
         }
+        @keyframes status-fade {
+          from { opacity: 0; transform: scale(0.85); filter: blur(4px); }
+          to { opacity: 1; transform: scale(1); filter: blur(0); }
+        }
         .animate-progress-watch {
           animation: progress-watch 3.5s linear forwards;
+        }
+        .status-fade-animation {
+          animation: status-fade 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
       `}</style>
     </div>
