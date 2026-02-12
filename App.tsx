@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppMode, GlobalState, Transaction, NotificationType } from './types';
 import SmartphoneUPI from './components/SmartphoneUPI';
 import Smartwatch from './components/Smartwatch';
@@ -17,6 +17,7 @@ const initialState: GlobalState = {
     pendingSync: [],
     offlineCount: 0,
     isActive: true,
+    isAutoReloadEnabled: false,
   },
   merchantWallet: {
     balance: 0,
@@ -37,8 +38,19 @@ const App: React.FC = () => {
   const [phoneAlert, setPhoneAlert] = useState<{ message: string; type: NotificationType } | null>(null);
   const [state, setState] = useState<GlobalState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : initialState;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Ensure new properties exist in saved state
+      if (parsed.userWallet && parsed.userWallet.isAutoReloadEnabled === undefined) {
+        parsed.userWallet.isAutoReloadEnabled = false;
+      }
+      return parsed;
+    }
+    return initialState;
   });
+
+  // Ref to prevent multiple triggers during the same state transition
+  const autoReloadTriggered = useRef(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -66,6 +78,59 @@ const App: React.FC = () => {
       haptics.errorPulse();
     }
   }, []);
+
+  const toggleAutoReload = (enabled: boolean) => {
+    setState(prev => ({
+      ...prev,
+      userWallet: { ...prev.userWallet, isAutoReloadEnabled: enabled }
+    }));
+    sounds.playPop();
+    haptics.lightClick();
+    triggerPhoneAlert(enabled ? "Auto-Reload enabled (₹50 → ₹200)" : "Auto-Reload disabled", 'info');
+  };
+
+  // Auto-Reload Effect
+  useEffect(() => {
+    const { userWallet, connectivity } = state;
+    const isWatchLinked = connectivity.isBluetoothOn && userWallet.isActive;
+    const isLoadReady = connectivity.isWifiOn && isWatchLinked;
+
+    if (userWallet.isAutoReloadEnabled && isLoadReady && userWallet.balance < 50 && !autoReloadTriggered.current) {
+      autoReloadTriggered.current = true;
+      const reloadAmount = 200 - userWallet.balance;
+      
+      if (userWallet.phoneBalance >= reloadAmount) {
+        // Delay slightly for UX feel if just connected
+        setTimeout(() => {
+          const txId = `TXN-AUTO-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+          const tx: Transaction = {
+            id: txId,
+            amount: reloadAmount,
+            timestamp: Date.now(),
+            type: 'CREDIT',
+            peer: 'Auto-Reload (Bank)',
+          };
+
+          setState(prev => ({
+            ...prev,
+            userWallet: {
+              ...prev.userWallet,
+              balance: prev.userWallet.balance + reloadAmount,
+              phoneBalance: prev.userWallet.phoneBalance - reloadAmount,
+              transactions: [tx, ...prev.userWallet.transactions],
+            }
+          }));
+          
+          triggerWatchAlert(`+₹${reloadAmount.toFixed(0)} AUTO-LOADED`, 'success');
+          triggerPhoneAlert(`Auto-Reload triggered: ₹${reloadAmount.toFixed(0)} added to ZiP WALLET`, 'success');
+          autoReloadTriggered.current = false;
+        }, 1000);
+      } else {
+        triggerPhoneAlert("Auto-Reload failed: Insufficient bank balance", 'error');
+        autoReloadTriggered.current = false;
+      }
+    }
+  }, [state.userWallet.balance, state.userWallet.isActive, state.connectivity, state.userWallet.isAutoReloadEnabled, triggerWatchAlert, triggerPhoneAlert]);
 
   const toggleUserActive = () => {
     const newState = !state.userWallet.isActive;
@@ -290,6 +355,7 @@ const App: React.FC = () => {
             onLoadMoney={loadWatchWallet} 
             onSync={syncWatch}
             onToggleConnectivity={setConnectivity}
+            onToggleAutoReload={toggleAutoReload}
             onCloseAlert={() => setPhoneAlert(null)}
           />
         )}

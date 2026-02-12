@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GlobalState, NotificationType } from '../types';
 
@@ -69,12 +68,18 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
           className="watch-face relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-6 text-center select-none"
         >
           
-          {/* Top Status Area */}
-          <div className="absolute top-4 flex flex-col items-center gap-0.5 z-20">
-            <div className={`transition-colors duration-500 ${bluetoothColorClass}`}>
-              <i className="fab fa-bluetooth-b text-base"></i>
+          {/* Top Status Area - Enhanced with Battery Level */}
+          <div className="absolute top-5 flex flex-col items-center z-20">
+            <div className="flex items-center gap-2 mb-0.5">
+              <div className={`transition-colors duration-500 ${bluetoothColorClass}`}>
+                <i className="fab fa-bluetooth-b text-[8px]"></i>
+              </div>
+              <div className="flex items-center gap-1 text-slate-500">
+                <span className="text-[7px] font-bold">85%</span>
+                <i className="fas fa-battery-three-quarters text-[8px]"></i>
+              </div>
             </div>
-            <div className="text-[10px] font-bold text-slate-300 tracking-wider">
+            <div className="text-[9px] font-black text-slate-300 tracking-widest uppercase">
               {time}
             </div>
           </div>

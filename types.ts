@@ -30,6 +30,7 @@ export interface GlobalState {
     pendingSync: Transaction[];   // Local to Watch, not yet synced
     offlineCount: number;
     isActive: boolean;
+    isAutoReloadEnabled: boolean; // New feature toggle
   };
   merchantWallet: {
     balance: number;
